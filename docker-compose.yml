@@ -1,0 +1,24 @@
+services:
+  sap-cloud-connector:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SAPCC_VERSION: "2.18.2"
+        SAPJVM_VERSION: "8.1.107"
+    image: sap-cloud-connector:latest
+    container_name: sap-cloud-connector
+    restart: unless-stopped
+    ports:
+      - "8443:8443"
+    volumes:
+      - scc_config:/opt/sap/scc/config
+      - scc_scc_config:/opt/sap/scc/scc_config
+      - scc_log:/opt/sap/scc/log
+    # Optional: Mount custom certificates
+    # - ./certs:/opt/sap/scc/certs:ro
+
+volumes:
+  scc_config:
+  scc_scc_config:
+  scc_log:
