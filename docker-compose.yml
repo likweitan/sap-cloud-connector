@@ -1,12 +1,6 @@
 services:
   sap-cloud-connector:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        SAPCC_VERSION: "2.18.2"
-        SAPJVM_VERSION: "8.1.107"
-    image: sap-cloud-connector:latest
+    image: ghcr.io/likweitan/sap-cloud-connector:latest
     container_name: sap-cloud-connector
     restart: unless-stopped
     ports:

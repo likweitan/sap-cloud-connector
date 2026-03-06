@@ -67,12 +67,12 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            SAPCC_VERSION=${{ github.event.inputs.sapcc_version || '2.18.2' }}
-            SAPJVM_VERSION=${{ github.event.inputs.sapjvm_version || '8.1.107' }}
+            SAPCC_VERSION=${{ github.event.inputs.sapcc_version || '2.19' }}
+            SAPJVM_VERSION=${{ github.event.inputs.sapjvm_version || '8.1.108' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
