@@ -74,6 +74,6 @@ jobs:
           build-args: |
             SAPCC_VERSION=${{ github.event.inputs.sapcc_version || '2.19.0' }}
             SAPJVM_VERSION=${{ github.event.inputs.sapjvm_version || '8.1.108' }}
-            SAPMACHINE_VERSION=25.0.2
+            SAPMACHINE_VERSION=17.0.14
           cache-from: type=gha
           cache-to: type=gha,mode=max

@@ -5,7 +5,7 @@ FROM rockylinux:9
 ################################################################
 ARG SAPCC_VERSION=2.19.0
 ARG SAPJVM_VERSION=8.1.108
-ARG SAPMACHINE_VERSION=25.0.2
+ARG SAPMACHINE_VERSION=17.0.14
 ARG TARGETARCH
 
 ################################################################
