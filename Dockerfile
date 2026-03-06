@@ -1,10 +1,11 @@
 FROM rockylinux:9
 
 ################################################################
-# DEFINE sapcc and jvm version
+# DEFINE versions
 ################################################################
-ARG SAPCC_VERSION=2.18.2
-ARG SAPJVM_VERSION=8.1.107
+ARG SAPCC_VERSION=2.19
+ARG SAPJVM_VERSION=8.1.108
+ARG SAPMACHINE_VERSION=25.0.2
 ARG TARGETARCH
 
 ################################################################
@@ -12,7 +13,7 @@ ARG TARGETARCH
 ################################################################
 #RUN dnf -y upgrade
 #RUN dnf -y update; dnf clean all
-RUN dnf -y install which unzip wget net-tools less sysstat procps-ng; dnf clean all
+RUN dnf -y install which unzip wget tar gzip net-tools less sysstat procps-ng; dnf clean all
 
 ################################################################
 # Install dependencies and the SAP packages
@@ -28,28 +29,35 @@ RUN dnf -y install which unzip wget net-tools less sysstat procps-ng; dnf clean 
 
 WORKDIR /tmp/sapdownloads
 
-# Map Docker's TARGETARCH to SAP's architecture naming convention
-# amd64 -> x64/x86_64, arm64 -> aarch64
-RUN if [ "$TARGETARCH" = "arm64" ]; then \
-      SAP_ARCH="aarch64"; \
-      SAP_ARCH_SHORT="aarch64"; \
-      RPM_ARCH="aarch64"; \
-    else \
-      SAP_ARCH="x64"; \
-      SAP_ARCH_SHORT="x64"; \
-      RPM_ARCH="x86_64"; \
-    fi && \
-# download sapcc and sapjvm + unzip sapcc + install sapjvm and then install sapcc
+# download sapcc and java runtime + install based on architecture
 # ATTENTION:
 # This automated download automatically accepts SAP's End User License Agreement (EULA).
 # Thus, when using this docker file as is you automatically accept SAP's EULA!
-    wget --no-check-certificate --no-cookies --header "Cookie: eula_3_2_agreed=tools.hana.ondemand.com/developer-license-3_2.txt; path=/;" -S "https://tools.hana.ondemand.com/additional/sapcc-${SAPCC_VERSION}-linux-${SAP_ARCH_SHORT}.zip" && \
-    wget --no-check-certificate --no-cookies --header "Cookie: eula_3_2_agreed=tools.hana.ondemand.com/developer-license-3_2.txt; path=/;" -S "https://tools.hana.ondemand.com/additional/sapjvm-${SAPJVM_VERSION}-linux-${SAP_ARCH}.rpm" && \
-    unzip sapcc-${SAPCC_VERSION}-linux-${SAP_ARCH_SHORT}.zip && \
-    rpm -i sapjvm-${SAPJVM_VERSION}-linux-${SAP_ARCH}.rpm && \
-    rpm -i com.sap.scc-ui-${SAPCC_VERSION}*.${RPM_ARCH}.rpm
 
-# set JAVA_HOME because this is needed by go.sh below, others are calulated
+# amd64: SAPJVM (RPM) + SAP CC x64
+# arm64: SAPMachine JDK (tar.gz) + SAP CC aarch64
+# On arm64, SAPMachine is symlinked to /opt/sapjvm_8 so JAVA_HOME works for both architectures
+RUN if [ "$TARGETARCH" = "arm64" ]; then \
+      echo "Building for arm64 - using SAPMachine JDK and SAP CC aarch64" && \
+      wget -q -O sapmachine.tar.gz "https://github.com/SAP/SapMachine/releases/download/sapmachine-${SAPMACHINE_VERSION}/sapmachine-jdk-${SAPMACHINE_VERSION}_linux-aarch64_bin.tar.gz" && \
+      mkdir -p /opt/sapmachine && \
+      tar -xzf sapmachine.tar.gz -C /opt/sapmachine --strip-components=1 && \
+      ln -s /opt/sapmachine /opt/sapjvm_8 && \
+      wget --no-check-certificate --no-cookies --header "Cookie: eula_3_2_agreed=tools.hana.ondemand.com/developer-license-3_2.txt; path=/;" -S "https://tools.hana.ondemand.com/additional/sapcc-${SAPCC_VERSION}-linux-aarch64.zip" && \
+      unzip sapcc-${SAPCC_VERSION}-linux-aarch64.zip && \
+      rpm -i --nodeps com.sap.scc-ui-${SAPCC_VERSION}*.aarch64.rpm; \
+    else \
+      echo "Building for amd64 - using SAPJVM and SAP CC x64" && \
+      wget --no-check-certificate --no-cookies --header "Cookie: eula_3_2_agreed=tools.hana.ondemand.com/developer-license-3_2.txt; path=/;" -S "https://tools.hana.ondemand.com/additional/sapjvm-${SAPJVM_VERSION}-linux-x64.rpm" && \
+      rpm -i sapjvm-${SAPJVM_VERSION}-linux-x64.rpm && \
+      wget --no-check-certificate --no-cookies --header "Cookie: eula_3_2_agreed=tools.hana.ondemand.com/developer-license-3_2.txt; path=/;" -S "https://tools.hana.ondemand.com/additional/sapcc-${SAPCC_VERSION}-linux-x64.zip" && \
+      unzip sapcc-${SAPCC_VERSION}-linux-x64.zip && \
+      rpm -i com.sap.scc-ui-${SAPCC_VERSION}*.x86_64.rpm; \
+    fi && \
+    rm -rf /tmp/sapdownloads/*
+
+# set JAVA_HOME because this is needed by go.sh below
+# On arm64, /opt/sapjvm_8 is a symlink to /opt/sapmachine
 ENV JAVA_HOME=/opt/sapjvm_8/
 #ENV CATALINA_BASE=/opt/sap/scc
 #ENV CATALINA_HOME=/opt/sap/scc
